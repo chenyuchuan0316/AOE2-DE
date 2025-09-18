@@ -1,0 +1,486 @@
+﻿<Window x:Class="RTSHelper.MainWindow" xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" 
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:local="clr-namespace:RTSHelper"
+        SizeChanged="Window_SizeChanged" MouseDown="Window_MouseDown" Closed="Window_Closed" MouseUp="Window_MouseUp" mc:Ignorable="d" 
+        Title="RTS Helper" AllowsTransparency="True" WindowStyle="None" ResizeMode="CanResizeWithGrip" 
+        Topmost="True" WindowStartupLocation="Manual" Height="{DynamicResource Alto}" Width="{DynamicResource Ancho}" 
+        Top="{DynamicResource PosiciónY}" Left="{DynamicResource PosiciónX}">
+
+    <Window.Background>
+        <SolidColorBrush Opacity="{DynamicResource Opacidad}" Color="{DynamicResource ColorFondo}" />
+    </Window.Background>
+
+    <Window.Resources>
+
+        <!-- ComboBox Personalizado !-->
+        <Style x:Key="ComboBoxColor" TargetType="{x:Type ComboBox}">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            
+                            <ToggleButton Grid.Column="2" Focusable="false" 
+                                          IsChecked="{Binding Path=IsDropDownOpen,Mode=TwoWay,RelativeSource={RelativeSource TemplatedParent}}">
+                                <ToggleButton.Template>
+                                    <ControlTemplate>
+
+                                        <Grid>
+                                            
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="4*" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+
+                                            <Border x:Name="Border" Grid.ColumnSpan="2" CornerRadius="2" Background="Transparent" 
+                                                    BorderBrush="{DynamicResource BrushFuente}" BorderThickness="1" />
+
+                                            <Border x:Name="Fondo" Grid.Column="0" CornerRadius="2,0,0,2" Margin="1" Background="Transparent" 
+                                                    BorderBrush="{DynamicResource BrushFuente}" BorderThickness="0,0,1,0" />
+
+                                            <Path x:Name="Arrow" Grid.Column="1" Fill="{DynamicResource BrushFuente}" HorizontalAlignment="Center" 
+                                                  VerticalAlignment="Center" Data="M 0 0 L 4 4 L 8 0 Z" />
+                                            
+                                        </Grid>
+                                        
+                                        <ControlTemplate.Triggers>
+                                            
+                                            <Trigger Property="ToggleButton.IsMouseOver" Value="true">
+                                                <Setter TargetName="Border" Property="Background" Value="#498205" />
+                                                <Setter TargetName="Fondo" Property="Background" Value="{DynamicResource BrushFondo}" />
+                                            </Trigger>
+                                            
+                                            <Trigger Property="ToggleButton.IsChecked" Value="true">
+                                                <Setter TargetName="Border" Property="Background" Value="#498205" />
+                                            </Trigger>
+                                            
+                                        </ControlTemplate.Triggers>
+                                        
+                                    </ControlTemplate>
+                                </ToggleButton.Template>
+                            </ToggleButton>
+
+                            <ContentPresenter Opacity="1" Name="ContentSite" IsHitTestVisible="False" Content="{TemplateBinding SelectionBoxItem}" 
+                                              ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}" 
+                                              ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}" Margin="4" />
+                            
+                            <TextBox x:Name="PART_EditableTextBox" Visibility="Hidden" IsReadOnly="{TemplateBinding IsReadOnly}" />
+                            
+                            <Popup Name="Popup" Placement="Bottom" IsOpen="{TemplateBinding IsDropDownOpen}" AllowsTransparency="True" 
+                                   Focusable="False" PopupAnimation="Slide">
+                                <Grid Name="DropDown" SnapsToDevicePixels="True" MinWidth="{TemplateBinding ActualWidth}" 
+                                      MaxHeight="{TemplateBinding MaxDropDownHeight}">
+                                    
+                                    <Border x:Name="DropDownBorder" Background="{DynamicResource BrushFondo}" />
+                                    
+                                    <ScrollViewer SnapsToDevicePixels="True">
+                                        <StackPanel IsItemsHost="True" />
+                                    </ScrollViewer>
+                                    
+                                </Grid>
+                            </Popup>
+                            
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            
+            <Style.Triggers>
+            </Style.Triggers>
+            
+        </Style>
+
+        <!-- Tooltip con tope de ancho de 500px. https://stackoverflow.com/questions/14033238/wpf-setting-tooltip-maxwidth -->
+        <Style TargetType="ToolTip">
+            <Style.Resources>
+                <Style TargetType="ContentPresenter">
+                    <Style.Resources>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="TextWrapping" Value="Wrap" />
+                        </Style>
+                    </Style.Resources>
+                </Style>
+            </Style.Resources>
+            <Setter Property="MaxWidth" Value="500" />
+        </Style>
+        
+        <!-- Menú contextual sin margen izquierda. https://stackoverflow.com/questions/5276826/system-windows-controls-menuitem-without-icon-area/17724242#17724242 -->
+        <ItemsPanelTemplate x:Key="MenuItemPanelTemplate">
+            <StackPanel Margin="-30, 0, -30, 0" Background="#DDD" />
+        </ItemsPanelTemplate>
+        
+        <Style TargetType="{x:Type MenuItem}">
+            <Setter Property="ItemsPanel" Value="{StaticResource MenuItemPanelTemplate}" />
+        </Style>
+
+        <Style TargetType="{x:Type ContextMenu}">
+            <Setter Property="ItemsPanel" Value="{StaticResource MenuItemPanelTemplate}" />
+        </Style>
+        <!-- Menú contextual sin margen izquierda> !-->
+ 
+        <RoutedUICommand x:Key="CmdNext" Text="" />
+        <RoutedUICommand x:Key="CmdPrevious" Text="" />
+        <RoutedUICommand x:Key="CmdBackMultipleSteps" Text="" />
+        <RoutedUICommand x:Key="CmdNextMultipleSteps" Text="" />
+        <RoutedUICommand x:Key="CmdBackward" Text="" />
+        <RoutedUICommand x:Key="CmdFordward" Text="" />
+        <RoutedUICommand x:Key="CmdStartNextStep" Text="" />
+        <RoutedUICommand x:Key="CmdRestartStep" Text="" />
+        <RoutedUICommand x:Key="CmdStart" Text="" />
+        <RoutedUICommand x:Key="CmdStop" Text="" />
+        <RoutedUICommand x:Key="CmdSynchronizeProgress" Text="" />
+        <RoutedUICommand x:Key="CmdResetIdleTime" Text="" />
+        <RoutedUICommand x:Key="CmdRemoveIdleTime" Text="" />
+        <RoutedUICommand x:Key="CmdAddIdleTime" Text="" />
+        <RoutedUICommand x:Key="CmdLastStep" Text="" />
+        <RoutedUICommand x:Key="CmdFirstStep" Text="" />
+        
+    </Window.Resources>
+
+    <Window.InputBindings>
+        <KeyBinding Key="Right" Command="{StaticResource CmdNext}" />
+        <KeyBinding Key="Left" Command="{StaticResource CmdPrevious}" />
+        <KeyBinding Key="Right" Modifiers="Ctrl" Command="{StaticResource CmdNextMultipleSteps}" />
+        <KeyBinding Key="Left" Modifiers="Ctrl" Command="{StaticResource CmdBackMultipleSteps}" />
+        <KeyBinding Key="Right" Modifiers="Shift" Command="{StaticResource CmdFordward}" />
+        <KeyBinding Key="Left" Modifiers="Shift" Command="{StaticResource CmdBackward}" />
+        <KeyBinding Key="Right" Modifiers="Alt" Command="{StaticResource CmdStartNextStep}" />
+        <KeyBinding Key="Left" Modifiers="Alt" Command="{StaticResource CmdRestartStep}" />
+        <KeyBinding Key="Enter" Command="{StaticResource CmdStart}" />
+        <KeyBinding Key="Esc" Command="{StaticResource CmdStop}" />
+        <KeyBinding Key="Up" Command="{StaticResource CmdSynchronizeProgress}" />
+        <KeyBinding Key="Down" Command="{StaticResource CmdResetIdleTime}" />
+        <KeyBinding Key="Up" Modifiers="Ctrl" Command="{StaticResource CmdRemoveIdleTime}" />
+        <KeyBinding Key="Down" Modifiers="Ctrl" Command="{StaticResource CmdAddIdleTime}" />
+        <KeyBinding Key="Right" Modifiers="Ctrl+Shift" Command="{StaticResource CmdLastStep}" />
+        <KeyBinding Key="Left" Modifiers="Ctrl+Shift" Command="{StaticResource CmdFirstStep}" />
+    </Window.InputBindings>
+
+    <Window.CommandBindings>
+        <CommandBinding Command="{StaticResource CmdNext}" Executed="BtnNext_Click" />
+        <CommandBinding Command="{StaticResource CmdPrevious}" Executed="BtnBack_Click" />
+        <CommandBinding Command="{StaticResource CmdBackMultipleSteps}" Executed="MniBackMultipleSteps_Click" />
+        <CommandBinding Command="{StaticResource CmdNextMultipleSteps}" Executed="MniNextMultipleSteps_Click" />
+        <CommandBinding Command="{StaticResource CmdBackward}" Executed="MniBackward_Click" />
+        <CommandBinding Command="{StaticResource CmdFordward}" Executed="MniFordward_Click" />
+        <CommandBinding Command="{StaticResource CmdStartNextStep}" Executed="MniStartNextStep_Click" />
+        <CommandBinding Command="{StaticResource CmdRestartStep}" Executed="MniRestartStep_Click" />
+        <CommandBinding Command="{StaticResource CmdStart}" Executed="BtnStart_Click" />
+        <CommandBinding Command="{StaticResource CmdStop}" Executed="BtnStop_Click" />
+        <CommandBinding Command="{StaticResource CmdSynchronizeProgress}" Executed="MniSynchronizeProgress_Click" />
+        <CommandBinding Command="{StaticResource CmdResetIdleTime}" Executed="MniResetIdleTime_Click" />
+        <CommandBinding Command="{StaticResource CmdRemoveIdleTime}" Executed="MniRemoveIdleTime_Click" />
+        <CommandBinding Command="{StaticResource CmdAddIdleTime}" Executed="MniAddIdleTime_Click" />
+        <CommandBinding Command="{StaticResource CmdLastStep}" Executed="MniLastStep_Click" />
+        <CommandBinding Command="{StaticResource CmdFirstStep}" Executed="MniFirstStep_Click" />
+    </Window.CommandBindings>
+    
+    <Grid>
+
+        <StackPanel x:Name="SpnSuperior" Panel.ZIndex="2" Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+
+            <local:HoverButton Click="BtnAlert_Click" x:Name="BtnAlert" BorderThickness="0" Foreground="#B64E4E" Visibility="Collapsed"
+                               FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}" 
+                               Width="{Binding ActualHeight, ElementName=BtnSettings, Mode=OneWay}" Style="{StaticResource customButton}" 
+                               bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205">⚠</local:HoverButton>
+
+            <local:HoverButton Click="BtnInfo_Click" x:Name="BtnInfo" BorderThickness="0" Foreground="#78C77E" Visibility="Collapsed"
+                               FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}" 
+                               Width="{Binding ActualHeight, ElementName=BtnSettings, Mode=OneWay}" Style="{StaticResource customButton}" 
+                               bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" ToolTipService.ShowDuration="60000">ℹ</local:HoverButton>
+            
+            <local:HoverButton x:Name="BtnStats" Click="BtnStats_Click" Visibility="{DynamicResource VisibilidadBotónStats}" 
+                               BorderThickness="0" Foreground="{DynamicResource BrushFuente}" 
+                               FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}" 
+                               Width="{Binding ActualHeight, ElementName=BtnSettings, Mode=OneWay}" Style="{StaticResource customButton}" 
+                               bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" ToolTip="See Stats">📊</local:HoverButton>
+               
+            <local:HoverButton x:Name="BtnAlternarPasoSiguienteAnterior" Click="BtnAlternarVistaPasoSiguienteAnterior_Click" 
+                               BorderThickness="0" Foreground="{DynamicResource BrushFuente}" Visibility="{DynamicResource VisibilidadBotónVerPasoAnterior}"
+                               FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}" 
+                               Width="{Binding ActualHeight, ElementName=BtnSettings, Mode=OneWay}" Style="{StaticResource customButton}" 
+                               bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" ToolTip="See Previous Step">⮨</local:HoverButton>
+            
+            <local:HoverButton x:Name="BtnSettings" Click="BtnSettings_Click" BorderThickness="0" Foreground="{DynamicResource BrushFuente}" 
+                               FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}" 
+                               Width="{Binding ActualHeight, ElementName=BtnSettings, Mode=OneWay}" Style="{StaticResource customButton}" 
+                               bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" ToolTip="Settings">⚙️</local:HoverButton>
+
+            <local:HoverButton x:Name="BtnMute" Click="BtnMute_Click" BorderThickness="0" Foreground="{DynamicResource BrushFuente}" 
+                               FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}" 
+                               Width="{Binding ActualHeight, ElementName=BtnMute, Mode=OneWay}" Style="{StaticResource customButton}" 
+                               bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" ToolTip="Mute">🔇</local:HoverButton>
+
+            <local:HoverButton x:Name="BtnMinize" Click="BtnMinize_Click" BorderThickness="0" Foreground="{DynamicResource BrushFuente}" 
+                               FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}" 
+                               Width="{Binding ActualHeight, ElementName=BtnMinize, Mode=OneWay}" Style="{StaticResource customButton}" 
+                               bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" ToolTip="Minimize">━</local:HoverButton>
+
+            <local:HoverButton x:Name="BtnClose" Click="BtnClose_Click" BorderThickness="0" Foreground="{DynamicResource BrushFuente}" 
+                               FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}" 
+                               Width="{Binding ActualHeight, ElementName=BtnClose, Mode=OneWay}" Style="{StaticResource customButton}" 
+                               bgColor="{DynamicResource BrushFondoControles}" hoverColor="DarkRed" ToolTip="Close">🗙</local:HoverButton>
+
+        </StackPanel>
+
+
+        <StackPanel x:Name="SpnLateralDerecho" Panel.ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0 0 3 3">
+
+            <StackPanel x:Name="SpnControlesPaso" HorizontalAlignment="Right">
+
+                <StackPanel Orientation="Horizontal">
+
+                    <local:HoverButton x:Name="BtnStart" Click="BtnStart_Click" Foreground="{DynamicResource BrushFuente}"         
+                        FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}"                
+                        BorderBrush="{DynamicResource BrushFuente}" BorderThickness="1" Margin="{DynamicResource MargenBotones}" 
+                        Style="{StaticResource customButton}" bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" 
+                        Width="{DynamicResource TamañoBotones}" Height="{DynamicResource TamañoBotones}" ToolTip="Start (Enter)">▷</local:HoverButton>
+
+                    <local:HoverButton x:Name="BtnStop" Click="BtnStop_Click" Foreground="{DynamicResource BrushFuente}"         
+                        FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}"                
+                        BorderBrush="{DynamicResource BrushFuente}" BorderThickness="1" Margin="{DynamicResource MargenBotones}" 
+                        Style="{StaticResource customButton}" bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205"
+                        Width="{DynamicResource TamañoBotones}" Height="{DynamicResource TamañoBotones}" ToolTip="Stop (Esc)">■</local:HoverButton>
+
+                </StackPanel>
+
+                <TextBox x:Name="TxtPaso" PreviewMouseDown="TxtPaso_PreviewMouseDown" TextChanged="TxtPaso_TextChanged" GotFocus="TxtPaso_GotFocus" 
+                    BorderBrush="{DynamicResource BrushFuente}" Padding="1" Margin="{DynamicResource MargenBotones}"
+                    FontSize="{DynamicResource FuenteGrande}" TextAlignment="Center" Background="{DynamicResource BrushFondoControles}" 
+                    Foreground="{DynamicResource BrushFuente}" ToolTip="Current Step" IsEnabled="False">
+
+                    <TextBox.CommandBindings>
+                        <CommandBinding Command="{StaticResource CmdNext}" Executed="BtnNext_Click" />
+                        <CommandBinding Command="{StaticResource CmdPrevious}" Executed="BtnBack_Click" />
+                        <CommandBinding Command="{StaticResource CmdBackMultipleSteps}" Executed="MniBackMultipleSteps_Click" />
+                        <CommandBinding Command="{StaticResource CmdNextMultipleSteps}" Executed="MniNextMultipleSteps_Click" />
+                        <CommandBinding Command="{StaticResource CmdBackward}" Executed="MniBackward_Click" />
+                        <CommandBinding Command="{StaticResource CmdFordward}" Executed="MniFordward_Click" />
+                        <CommandBinding Command="{StaticResource CmdStartNextStep}" Executed="MniStartNextStep_Click" />
+                        <CommandBinding Command="{StaticResource CmdRestartStep}" Executed="MniRestartStep_Click" />
+                        <CommandBinding Command="{StaticResource CmdStart}" Executed="BtnStart_Click" />
+                        <CommandBinding Command="{StaticResource CmdStop}" Executed="BtnStop_Click" />
+                        <CommandBinding Command="{StaticResource CmdSynchronizeProgress}" Executed="MniSynchronizeProgress_Click" />
+                        <CommandBinding Command="{StaticResource CmdResetIdleTime}" Executed="MniResetIdleTime_Click" />
+                        <CommandBinding Command="{StaticResource CmdRemoveIdleTime}" Executed="MniRemoveIdleTime_Click" />
+                        <CommandBinding Command="{StaticResource CmdAddIdleTime}" Executed="MniAddIdleTime_Click" />
+                        <CommandBinding Command="{StaticResource CmdLastStep}" Executed="MniLastStep_Click" />
+                        <CommandBinding Command="{StaticResource CmdFirstStep}" Executed="MniFirstStep_Click" />
+                    </TextBox.CommandBindings>
+                    
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Right" Command="{StaticResource CmdNext}" />
+                        <KeyBinding Key="Left" Command="{StaticResource CmdPrevious}" />
+                        <KeyBinding Key="Right" Modifiers="Ctrl" Command="{StaticResource CmdNextMultipleSteps}" />
+                        <KeyBinding Key="Left" Modifiers="Ctrl" Command="{StaticResource CmdBackMultipleSteps}" />
+                        <KeyBinding Key="Right" Modifiers="Shift" Command="{StaticResource CmdFordward}" />
+                        <KeyBinding Key="Left" Modifiers="Shift" Command="{StaticResource CmdBackward}" />
+                        <KeyBinding Key="Right" Modifiers="Alt" Command="{StaticResource CmdStartNextStep}" />
+                        <KeyBinding Key="Left" Modifiers="Alt" Command="{StaticResource CmdRestartStep}" />
+                        <KeyBinding Key="Enter" Command="{StaticResource CmdStart}" />
+                        <KeyBinding Key="Esc" Command="{StaticResource CmdStop}" />
+                        <KeyBinding Key="Up" Command="{StaticResource CmdSynchronizeProgress}" />
+                        <KeyBinding Key="Down" Command="{StaticResource CmdResetIdleTime}" />
+                        <KeyBinding Key="Up" Modifiers="Ctrl" Command="{StaticResource CmdRemoveIdleTime}" />
+                        <KeyBinding Key="Down" Modifiers="Ctrl" Command="{StaticResource CmdAddIdleTime}" />
+                        <KeyBinding Key="Right" Modifiers="Ctrl+Shift" Command="{StaticResource CmdLastStep}" />
+                        <KeyBinding Key="Left" Modifiers="Ctrl+Shift" Command="{StaticResource CmdFirstStep}" />
+                    </TextBox.InputBindings>
+                    
+                </TextBox>
+
+
+                <StackPanel Orientation="Horizontal">
+
+                    <local:HoverButton x:Name="BtnBack" Click="BtnBack_Click" Foreground="{DynamicResource BrushFuente}" IsEnabled="False"        
+                        FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}"                
+                        BorderBrush="{DynamicResource BrushFuente}" BorderThickness="1" Margin="{DynamicResource MargenBotones}" 
+                        Style="{StaticResource customButton}" bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" 
+                        Width="{DynamicResource TamañoBotones}" Height="{DynamicResource TamañoBotones}" ToolTip="Previous Step (Left Key)" Content="|◁">
+
+                        <local:HoverButton.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem x:Name="MniFirstStep" Click="MniFirstStep_Click"  Header="⮜       Go to First Step (Ctrl + Shift + Left)" />
+                                <Separator BorderBrush="#BBB" BorderThickness="0 2 0 0" Margin="0 5 0 5" />
+                                <MenuItem x:Name="MniAddIdleTime" Click="MniAddIdleTime_Click" Header="➕     Add Idle Time (Ctrl + Down)" />
+                                <MenuItem x:Name="MniResetIdleTime" Click="MniResetIdleTime_Click" Header="🗙      Reset Idle Time (Down)" />
+                                <Separator BorderBrush="#BBB" BorderThickness="0 2 0 0" Margin="0 5 0 5" />
+                                <MenuItem x:Name="MniBackMultipleSteps" Click="MniBackMultipleSteps_Click" Header="|◁      Back X Steps (Ctrl + Left)" />
+                                <MenuItem x:Name="MniBackward" Click="MniBackward_Click" Header="◁◁    Backward X Seconds (Shift + Left)" />
+                                <MenuItem x:Name="MniRestartStep" Click="MniRestartStep_Click" Header="|◁◁   Restart Step (Alt + Left)" />
+                            </ContextMenu>
+                        </local:HoverButton.ContextMenu>
+   
+                    </local:HoverButton>
+
+                    <local:HoverButton x:Name="BtnNext" Click="BtnNext_Click" Foreground="{DynamicResource BrushFuente}" IsEnabled="True"  
+                        FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}"                
+                        BorderBrush="{DynamicResource BrushFuente}" BorderThickness="1" Margin="{DynamicResource MargenBotones}" 
+                        Style="{StaticResource customButton}" bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" 
+                        Width="{DynamicResource TamañoBotones}" Height="{DynamicResource TamañoBotones}" ToolTip="Next Step (Right Key)" Content="▷|">
+
+                        <local:HoverButton.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem x:Name="MniLastStep" Click="MniLastStep_Click"  Header="➤      Go to Last Step (Ctrl + Shift + Right)" />
+                                <Separator BorderBrush="#BBB" BorderThickness="0 2 0 0" Margin="0 5 0 5" />
+                                <MenuItem x:Name="MniRemoveIdleTime" Click="MniRemoveIdleTime_Click" Header="➖     Remove Idle Time (Ctrl + Up)" />
+                                <MenuItem x:Name="MniSynchronizeProgress" Click="MniSynchronizeProgress_Click" Header=" ⇄      Synchronize Progress (Up)" />
+                                <Separator BorderBrush="#BBB" BorderThickness="0 2 0 0" Margin="0 5 0 5" />
+                                <MenuItem x:Name="MniNextMultipleSteps" Click="MniNextMultipleSteps_Click" Header="▷|      Next X Steps (Ctrl + Right)" />
+                                <MenuItem x:Name="MniFordward" Click="MniFordward_Click" Header="▷▷    Fordward X Seconds (Shift + Right)" />
+                                <MenuItem x:Name="MniStartNextStep" Click="MniStartNextStep_Click"  Header="▷▷|   Start Next Step (Alt + Right)" />
+                            </ContextMenu>
+                        </local:HoverButton.ContextMenu>
+
+                    </local:HoverButton>
+
+                </StackPanel>
+
+            </StackPanel>
+
+
+            <StackPanel x:Name="SpnInferior" Panel.ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Bottom" Orientation="Horizontal">
+
+                <local:HoverButton x:Name="BtnRemoveIdleTime" Click="BtnRemoveIdleTime_Click" Foreground="{DynamicResource BrushFuente}" 
+                                   IsEnabled="False" FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}"                
+                                   BorderBrush="{DynamicResource BrushFuente}" BorderThickness="1" Margin="{DynamicResource MargenBotones}" 
+                                   Style="{StaticResource customButton}" bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" 
+                                   Width="{DynamicResource TamañoBotones}" Height="{DynamicResource TamañoBotones}" ToolTip="Remove Idle Time" 
+                                   Visibility="{DynamicResource VisibilidadBotónRemoveIdleTime}"
+                                   Content="➖">
+
+                </local:HoverButton>
+
+                <StackPanel Width="8"></StackPanel>
+
+                <StackPanel Orientation="Horizontal" x:Name="SpnIndicadoresDeProgreso">
+
+                    <local:CircularProgress x:Name="CpgProgresoPaso" Height="{DynamicResource TamañoBotones}" 
+                                            Width="{DynamicResource TamañoBotones}" Margin="{DynamicResource MargenBarraProgresoCircularDelPaso}" 
+                                            Value="0" HorizontalAlignment="Center" ToolTip="Step Progress"
+                                            Visibility="{DynamicResource VisibilidadProgresoPaso}"
+                                            StrokeThickness="{DynamicResource GrosorBarraProgresoCircularDelPaso}" />
+
+                    <Label x:Name="LblTiempoEnJuego" ToolTip="Game Time" Foreground="{DynamicResource BrushFuente}" 
+                           Visibility="{DynamicResource VisibilidadTiempoEnJuego}"
+                           FontSize="{DynamicResource FuenteGrande}" Margin="{DynamicResource MargenBarraProgresoCircularDelPaso}">0:00</Label>
+                    <!--Inicia en - para tener algún contenido y no tener movimientos extraños en la interface cuando se le da start. 
+                    Si se inicia en blanco, se mueve la interface al iniciar. -->
+
+                </StackPanel>
+
+                <local:HoverButton x:Name="BtnAddIdleTime" Click="BtnAddIdleTime_Click" Foreground="{DynamicResource BrushFuente}" IsEnabled="False"        
+                        FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}"                
+                        BorderBrush="{DynamicResource BrushFuente}" BorderThickness="1" Margin="{DynamicResource MargenBotones}" 
+                        Style="{StaticResource customButton}" bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" 
+                        Width="{DynamicResource TamañoBotones}" Height="{DynamicResource TamañoBotones}" ToolTip="Add Idle Time" Content="➕"
+                        Visibility="{DynamicResource VisibilidadBotónAddIdleTime}">
+
+                </local:HoverButton>
+
+                <ComboBox x:Name="CmbBuildOrders" ToolTip="Build Order" SelectionChanged="CmbBuildOrders_SelectionChanged" SelectedIndex="0" 
+                      Style="{StaticResource ComboBoxColor}" Margin="{DynamicResource MargenBotones}" Foreground="{DynamicResource BrushFuente}" 
+                      Width="{DynamicResource AnchoSelectorBuildOrder}" FontSize="{DynamicResource FuenteNormal}" VerticalAlignment="Center" 
+                      MaxDropDownHeight="Auto" >
+                    
+                    <ComboBoxItem>Tutorial</ComboBoxItem>
+                    <ComboBox.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem x:Name="MniRecargarBuildOrder" Click="MniRecargarBuildOrder_Click"  Header="⟳     Reload" />
+                            <MenuItem x:Name="MniAbrirCarpetaBuildOrders" Click="MniAbrirCarpetaBuildOrders_Click"  Header="🗁   Open Directory" />
+                            <MenuItem x:Name="MniNuevaBuildOrder" Click="MniNuevaBuildOrder_Click"  Header="🗋      New Build Order" />
+                            <MenuItem x:Name="MniVerificarCódigo" Click="MniVerificarCódigo_Click"  Header="&lt;>    Check Code" />
+                            <Separator BorderBrush="#BBB" BorderThickness="0 2 0 0" Margin="0 5 0 5" />
+                            <MenuItem x:Name="MniAdicionarEliminarDeFavoritos" Click="MniAdicionarEliminarDeFavoritos_Click"  Header="★" />
+                            <MenuItem x:Name="MniAlternarVerSoloFavoritos" Click="MniAlternarVerSoloFavoritos_Click"  Header="👁  Show Only Favorites" />
+                            <Separator BorderBrush="#BBB" BorderThickness="0 2 0 0" Margin="0 5 0 5" />
+                            <MenuItem x:Name="MniEditarBuildOrder" Click="MniEditarBuildOrder_Click"  Header="✎   Edit All Code" />
+                            <MenuItem x:Name="MniMostrarOcultarCódigo" Click="MniMostrarOcultarCódigo_Click"  Header="✎   Edit Code" />
+                        </ContextMenu>
+                    </ComboBox.ContextMenu>
+
+                    <ComboBox.CommandBindings>
+                        <CommandBinding Command="{StaticResource CmdNext}" Executed="BtnNext_Click" />
+                        <CommandBinding Command="{StaticResource CmdPrevious}" Executed="BtnBack_Click" />
+                        <CommandBinding Command="{StaticResource CmdBackMultipleSteps}" Executed="MniBackMultipleSteps_Click" />
+                        <CommandBinding Command="{StaticResource CmdNextMultipleSteps}" Executed="MniNextMultipleSteps_Click" />
+                        <CommandBinding Command="{StaticResource CmdBackward}" Executed="MniBackward_Click" />
+                        <CommandBinding Command="{StaticResource CmdFordward}" Executed="MniFordward_Click" />
+                        <CommandBinding Command="{StaticResource CmdStartNextStep}" Executed="MniStartNextStep_Click" />
+                        <CommandBinding Command="{StaticResource CmdRestartStep}" Executed="MniRestartStep_Click" />
+                        <CommandBinding Command="{StaticResource CmdStart}" Executed="BtnStart_Click" />
+                        <CommandBinding Command="{StaticResource CmdStop}" Executed="BtnStop_Click" />
+                        <CommandBinding Command="{StaticResource CmdSynchronizeProgress}" Executed="MniSynchronizeProgress_Click" />
+                        <CommandBinding Command="{StaticResource CmdResetIdleTime}" Executed="MniResetIdleTime_Click" />
+                        <CommandBinding Command="{StaticResource CmdRemoveIdleTime}" Executed="MniRemoveIdleTime_Click" />
+                        <CommandBinding Command="{StaticResource CmdAddIdleTime}" Executed="MniAddIdleTime_Click" />
+                        <CommandBinding Command="{StaticResource CmdLastStep}" Executed="MniLastStep_Click" />
+                        <CommandBinding Command="{StaticResource CmdFirstStep}" Executed="MniFirstStep_Click" />
+                    </ComboBox.CommandBindings>
+
+                    <ComboBox.InputBindings>
+                        <KeyBinding Key="Right" Command="{StaticResource CmdNext}" />
+                        <KeyBinding Key="Left" Command="{StaticResource CmdPrevious}" />
+                        <KeyBinding Key="Right" Modifiers="Ctrl" Command="{StaticResource CmdNextMultipleSteps}" />
+                        <KeyBinding Key="Left" Modifiers="Ctrl" Command="{StaticResource CmdBackMultipleSteps}" />
+                        <KeyBinding Key="Right" Modifiers="Shift" Command="{StaticResource CmdFordward}" />
+                        <KeyBinding Key="Left" Modifiers="Shift" Command="{StaticResource CmdBackward}" />
+                        <KeyBinding Key="Right" Modifiers="Alt" Command="{StaticResource CmdStartNextStep}" />
+                        <KeyBinding Key="Left" Modifiers="Alt" Command="{StaticResource CmdRestartStep}" />
+                        <KeyBinding Key="Enter" Command="{StaticResource CmdStart}" />
+                        <KeyBinding Key="Esc" Command="{StaticResource CmdStop}" />
+                        <KeyBinding Key="Up" Command="{StaticResource CmdSynchronizeProgress}" />
+                        <KeyBinding Key="Down" Command="{StaticResource CmdResetIdleTime}" />
+                        <KeyBinding Key="Up" Modifiers="Ctrl" Command="{StaticResource CmdRemoveIdleTime}" />
+                        <KeyBinding Key="Down" Modifiers="Ctrl" Command="{StaticResource CmdAddIdleTime}" />
+                        <KeyBinding Key="Right" Modifiers="Ctrl+Shift" Command="{StaticResource CmdLastStep}" />
+                        <KeyBinding Key="Left" Modifiers="Ctrl+Shift" Command="{StaticResource CmdFirstStep}" />
+                    </ComboBox.InputBindings>
+                    
+                </ComboBox>
+
+            </StackPanel>
+
+        </StackPanel>
+
+        <StackPanel x:Name="SpnPaso" Orientation="Vertical" Panel.ZIndex="0" HorizontalAlignment="Left" VerticalAlignment="Top" 
+                    Background="{DynamicResource BrushFondoControles}" Margin="{DynamicResource MargenPaso}">
+
+        </StackPanel>
+
+        <StackPanel x:Name="SpnCódigoPaso" Visibility="Hidden" Orientation="Horizontal" Panel.ZIndex="1" HorizontalAlignment="Left" VerticalAlignment="Bottom" 
+                    Background="{DynamicResource BrushFondoControles}">
+
+            <TextBox x:Name="TxtCódigoPaso" Foreground="{DynamicResource BrushFuente}" FontSize="{DynamicResource FuenteGrande}" 
+                     Background="{DynamicResource BrushFondo}" MinLines="1" FontFamily="Consolas" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                     TextChanged="TxtCódigoPaso_TextChanged" HorizontalAlignment="Left" LostFocus="TxtCódigoPaso_LostFocus" KeyDown="TxtCódigoPaso_KeyDown">
+            </TextBox>
+            
+            <local:HoverButton x:Name="BtnCerrarCódigo" Click="BtnCerrarCódigo_Click" Foreground="{DynamicResource BrushFuente}"   
+                        FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}"             
+                        BorderBrush="{DynamicResource BrushFuente}" BorderThickness="1" VerticalAlignment="Top" Margin="5 0 0 0"
+                        Style="{StaticResource customButton}" bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" 
+                        Width="{DynamicResource TamañoBotones}" Height="{DynamicResource TamañoBotones}" ToolTip="Hide Code" Content="🗙" />
+
+            <local:HoverButton x:Name="BtnEscribirCódigoPaso" Click="BtnEscribirCódigoPaso_Click" Foreground="{DynamicResource BrushFuente}"   
+                        FontSize="{DynamicResource FuenteNormal}" FontWeight="Bold" Padding="{DynamicResource PaddingBotones}"             
+                        BorderBrush="{DynamicResource BrushFuente}" BorderThickness="1" VerticalAlignment="Top" Margin="5 0 0 0"
+                        Style="{StaticResource customButton}" bgColor="{DynamicResource BrushFondoControles}" hoverColor="#498205" 
+                        Width="{DynamicResource TamañoBotones}" Height="{DynamicResource TamañoBotones}" ToolTip="Save to File (Ctrl+S)" Content="🖫" />
+
+        </StackPanel>
+        
+        <StackPanel x:Name="SpnPasoSiguienteAnterior" Orientation="Vertical" Panel.ZIndex="0" HorizontalAlignment="Right" VerticalAlignment="Top" 
+                    Background="{DynamicResource BrushFondoControles}" Margin="{DynamicResource MargenPasoSiguiente}"
+                    Visibility="{DynamicResource VisibilidadPasoSiguienteAnterior}" >
+        </StackPanel>
+
+        <StackPanel x:Name="SpnPasoAnterior" Orientation="Vertical" Panel.ZIndex="2" HorizontalAlignment="Right" VerticalAlignment="Top" 
+                    Background="{DynamicResource BrushFondoControles}" Margin="{DynamicResource MargenPasoSiguiente}"
+                    Visibility="{DynamicResource VisibilidadPasoAnterior}" Opacity="1" > <!--Panel.ZIndex se cambia a -1 en código cuando se muestra el cuadro de edición de código del paso. -->    
+        </StackPanel>
+
+        <Label Background="White" Panel.ZIndex="4"  Visibility="Collapsed" HorizontalAlignment="Right" Margin="0 25 90 0" VerticalAlignment="Top" 
+               Foreground="Red" FontSize="12" FontWeight="Bold" x:Name="LblDepuración">Depuración</Label>
+        
+    </Grid>
+</Window>
